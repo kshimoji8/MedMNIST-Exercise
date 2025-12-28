@@ -1,1 +1,0 @@
-# MedMNIST-Exercise-Public
