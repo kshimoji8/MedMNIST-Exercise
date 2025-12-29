@@ -163,7 +163,6 @@ def build_model(input_shape, num_classes, model_type='simple', multi_label=False
         model = models.Sequential(layers_list)
 
     model.compile(optimizer='adam', loss=loss, metrics=['accuracy'])
-    model.build(input_shape)
     return model
 
 # ==========================================
