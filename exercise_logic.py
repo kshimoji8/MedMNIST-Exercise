@@ -200,21 +200,62 @@ def show_evaluation_reports(model, x_test, y_test, labels_dict, multi_label=Fals
         print(classification_report(y_true, y_pred, target_names=labels_dict.values()))
 
 # ==========================================
-# 4. 高度な分析ロジック (Grad-CAM)
+# 4. 高度な分析ロジック (Grad-CAM) - Keras 3 対応版
 # ==========================================
 def compute_gradcam(model, img_array, last_conv_layer_name):
-    """Grad-CAMヒートマップの生成"""
-    grad_model = models.Model(inputs=model.input, outputs=[model.get_layer(last_conv_layer_name).output, model.output])
+    """
+    Grad-CAMヒートマップの生成
+    
+    【Keras 3 対応修正】
+    Keras 3 (TensorFlow 2.16+) では、model.input にアクセスする前に
+    モデルが実際のデータで呼び出されている必要があります。
+    この修正版では、モデルを一度呼び出してからGrad-CAMモデルを構築します。
+    
+    Parameters:
+    -----------
+    model : keras.Model
+        学習済みのKerasモデル
+    img_array : np.ndarray
+        入力画像（バッチ次元を含む: shape=(1, H, W, C)）
+    last_conv_layer_name : str
+        Grad-CAMを計算する最後の畳み込み層の名前
+        
+    Returns:
+    --------
+    np.ndarray
+        元画像サイズにリサイズされたヒートマップ
+    """
+    # ★ Keras 3対応: モデルを一度呼び出してビルドを確定させる
+    # これにより model.input が利用可能になる
+    _ = model(img_array)
+    
+    # Grad-CAM用の中間モデルを構築
+    grad_model = models.Model(
+        inputs=model.input, 
+        outputs=[
+            model.get_layer(last_conv_layer_name).output, 
+            model.output
+        ]
+    )
 
     with tf.GradientTape() as tape:
         last_conv_layer_output, preds = grad_model(img_array)
+        # マルチラベルの場合も考慮して、最も確信度の高いクラスを選択
         class_channel = preds[:, np.argmax(preds[0])]
 
+    # 勾配を計算
     grads = tape.gradient(class_channel, last_conv_layer_output)
     pooled_grads = tf.reduce_mean(grads, axis=(0, 1, 2))
     
+    # ヒートマップを生成
     last_conv_layer_output = last_conv_layer_output[0]
     heatmap = last_conv_layer_output @ pooled_grads[..., np.newaxis]
     heatmap = tf.squeeze(heatmap)
     heatmap = tf.maximum(heatmap, 0) / tf.math.reduce_max(heatmap)
-    return heatmap.numpy()
+    
+    # ★ ヒートマップを元画像サイズにリサイズ（可視化品質向上）
+    heatmap_resized = tf.image.resize(
+        heatmap[..., np.newaxis], 
+        (img_array.shape[1], img_array.shape[2])
+    )
+    return tf.squeeze(heatmap_resized).numpy()
