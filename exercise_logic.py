@@ -94,8 +94,14 @@ def load_and_preprocess(data_flag='pathmnist', as_rgb=True):
         x_train = x_train[..., np.newaxis]
         x_test = x_test[..., np.newaxis]
 
-    y_train = train_dataset.labels.astype('float32').flatten()
-    y_test = test_dataset.labels.astype('float32').flatten()
+    # ラベルが1列の場合のみflatten()し、マルチラベルの場合はそのままの形状を維持
+    y_train = train_dataset.labels.astype('float32')
+    y_test = test_dataset.labels.astype('float32')
+    
+    # ラベルが1次元（単一ラベル）の場合のみflatten
+    if len(y_train.shape) == 1 or (len(y_train.shape) == 2 and y_train.shape[1] == 1):
+        y_train = y_train.flatten()
+        y_test = y_test.flatten()
 
     return (x_train, y_train), (x_test, y_test), info
 
@@ -108,9 +114,10 @@ def build_model(input_shape, num_classes, model_type='simple', multi_label=False
     """
     if model_type == 'simple':
         model = models.Sequential([
-            layers.Conv2D(32, (3, 3), activation='relu', input_shape=input_shape),
+            layers.Input(shape=input_shape),
+            layers.Conv2D(32, (3, 3), activation='relu'),
             layers.MaxPooling2D((2, 2)),
-            layers.Conv2D(64, (3, 3), activation='relu'),
+            layers.Conv2D(64, (3, 3), activation='relu', name='last_conv_layer'),
             layers.MaxPooling2D((2, 2)),
             layers.Flatten(),
             layers.Dense(64, activation='relu'),
