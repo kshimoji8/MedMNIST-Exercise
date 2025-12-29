@@ -418,3 +418,151 @@ def show_gradcam_comparison(model, images, labels=None, last_conv_layer_name='la
     plt.show()
     
     return heatmaps
+
+
+# ==========================================
+# 5. Gradioアプリ構築ロジック
+# ==========================================
+def create_gradio_app(model, info, data_flag):
+    """
+    学習済みモデルからGradio Webアプリを構築する。
+    
+    Parameters
+    ----------
+    model : keras.Model
+        学習済みのKerasモデル
+    info : dict
+        データセット情報（ラベル名など）
+    data_flag : str
+        データセット名（タイトル表示用）
+        
+    Returns
+    -------
+    gr.Interface
+        構築されたGradioインターフェース
+    """
+    import gradio as gr
+    from PIL import Image
+    
+    label_names = list(info['label'].values())
+    
+    def predict(image):
+        """アップロードされた画像を診断する関数"""
+        if image is None:
+            return None
+        
+        # 画像の前処理
+        img = Image.fromarray(image).convert('RGB').resize((28, 28))
+        img_array = np.array(img).astype('float32') / 255.0
+        img_array = np.expand_dims(img_array, axis=0)
+        
+        # 予測
+        preds = model.predict(img_array, verbose=0)[0]
+        
+        # 2値分類の場合（sigmoid出力）
+        if len(preds.shape) == 0 or len(label_names) == 2:
+            prob = float(preds) if len(preds.shape) == 0 else float(preds[0])
+            return {label_names[0]: 1 - prob, label_names[1]: prob}
+        
+        # 多クラス分類の場合（softmax出力）
+        return {label_names[i]: float(preds[i]) for i in range(len(label_names))}
+    
+    # Gradioインターフェースの構築
+    demo = gr.Interface(
+        fn=predict,
+        inputs=gr.Image(label="Upload Image"),
+        outputs=gr.Label(num_top_classes=len(label_names), label="Prediction"),
+        title="Medical Image Diagnosis AI",
+        description=f"Dataset: {data_flag} | Upload an image to get AI diagnosis.",
+        examples=None,
+        flagging_mode="never"
+    )
+    
+    return demo
+
+
+# ==========================================
+# 6. サンプル画像生成ロジック
+# ==========================================
+def create_sample_images(x_test, y_test, info, data_flag, n_samples=10):
+    """
+    テストデータからサンプル画像を作成し、ZIPファイルにまとめる。
+    各クラスから最低1枚を含むハイブリッドサンプリングを行う。
+    
+    Parameters
+    ----------
+    x_test : np.ndarray
+        テスト画像データ
+    y_test : np.ndarray
+        テストラベルデータ
+    info : dict
+        データセット情報（ラベル名など）
+    data_flag : str
+        データセット名（ファイル名用）
+    n_samples : int
+        サンプル数（デフォルト: 10）
+        
+    Returns
+    -------
+    str
+        作成されたZIPファイルのパス
+    """
+    from PIL import Image
+    import zipfile
+    
+    # サンプル画像を保存するディレクトリ
+    sample_dir = '/tmp/sample_images'
+    os.makedirs(sample_dir, exist_ok=True)
+    
+    # 既存ファイルをクリア
+    for f in os.listdir(sample_dir):
+        os.remove(os.path.join(sample_dir, f))
+    
+    # ハイブリッドサンプリング: 各クラス最低1枚 + 残りはランダム
+    selected_indices = []
+    
+    # 各クラスから1枚ずつ選択
+    unique_classes = np.unique(y_test)
+    for cls in unique_classes:
+        cls_indices = np.where(y_test == cls)[0]
+        selected_indices.append(np.random.choice(cls_indices))
+    
+    # 残りをランダムに選択（重複なし）
+    remaining = n_samples - len(selected_indices)
+    if remaining > 0:
+        available_indices = np.setdiff1d(np.arange(len(x_test)), selected_indices)
+        additional = np.random.choice(available_indices, size=remaining, replace=False)
+        selected_indices.extend(additional)
+    
+    # 画像をJPEGとして保存
+    saved_files = []
+    for i, idx in enumerate(selected_indices):
+        # 0-1のfloatを0-255のuint8に変換
+        img_array = (x_test[idx] * 255).astype(np.uint8)
+        img = Image.fromarray(img_array)
+        
+        # ファイル名にラベル情報を含める
+        if data_flag == 'chestmnist':
+            label = 'abnormal' if y_test[idx] == 1 else 'normal'
+        else:
+            label_idx = int(y_test[idx])
+            label = info['label'][str(label_idx)]
+        
+        # ファイル名をシンプルに（特殊文字を除去、2桁連番）
+        safe_label = label.replace(' ', '_').replace('-', '_')[:20]
+        filename = f'sample_{i+1:02d}_{safe_label}.jpg'
+        filepath = os.path.join(sample_dir, filename)
+        
+        img.save(filepath, 'JPEG')
+        saved_files.append(filepath)
+        print(f"Created: {filename} (Label: {label})")
+    
+    # ZIPファイルにまとめる
+    zip_path = '/tmp/sample_images.zip'
+    with zipfile.ZipFile(zip_path, 'w') as zipf:
+        for filepath in saved_files:
+            zipf.write(filepath, os.path.basename(filepath))
+    
+    print(f"\n✓ サンプル画像を作成しました（{len(saved_files)}枚、各クラス最低1枚含む）")
+    
+    return zip_path
