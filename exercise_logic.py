@@ -307,7 +307,7 @@ def visualize_feature_maps(model, image, layer_name=None, max_features=16):
     
     # 元画像を最初に表示
     axes[0].imshow(img_array[0])
-    axes[0].set_title('入力画像', fontsize=10)
+    axes[0].set_title('Input Image', fontsize=10)
     axes[0].axis('off')
     
     # 残りの最初の行のセルを非表示
@@ -318,14 +318,14 @@ def visualize_feature_maps(model, image, layer_name=None, max_features=16):
     for i in range(n_features):
         ax = axes[cols + i]
         ax.imshow(feature_maps[0, :, :, i], cmap='viridis')
-        ax.set_title(f'特徴 {i+1}', fontsize=9)
+        ax.set_title(f'Feature {i+1}', fontsize=9)
         ax.axis('off')
     
     # 余分なセルを非表示
     for i in range(cols + n_features, len(axes)):
         axes[i].axis('off')
     
-    plt.suptitle(f'層「{target_layer.name}」の特徴マップ（{n_features}個表示）', fontsize=12)
+    plt.suptitle(f'Feature Maps from Layer "{target_layer.name}" ({n_features} shown)', fontsize=12)
     plt.tight_layout()
     plt.show()
     
@@ -390,46 +390,46 @@ def visualize_cnn_flow(model, image, labels_dict=None):
     
     # 1. 入力画像
     axes[0].imshow(img_array[0])
-    axes[0].set_title('① 入力画像', fontsize=11)
+    axes[0].set_title('1. Input', fontsize=11)
     axes[0].axis('off')
     
     # 2. 第1畳み込み層の特徴マップ（代表的な4つを合成）
     fm1 = layer_outputs[0][1]
     fm1_combined = np.mean(fm1[0, :, :, :4], axis=-1)
     axes[1].imshow(fm1_combined, cmap='viridis')
-    axes[1].set_title(f'② 第1層の特徴\n（{layer_outputs[0][0]}）', fontsize=11)
+    axes[1].set_title(f'2. Layer 1\n({layer_outputs[0][0]})', fontsize=11)
     axes[1].axis('off')
     
     # 3. 第2畳み込み層の特徴マップ（代表的な4つを合成）
     fm2 = layer_outputs[1][1]
     fm2_combined = np.mean(fm2[0, :, :, :4], axis=-1)
     axes[2].imshow(fm2_combined, cmap='viridis')
-    axes[2].set_title(f'③ 第2層の特徴\n（{layer_outputs[1][0]}）', fontsize=11)
+    axes[2].set_title(f'3. Layer 2\n({layer_outputs[1][0]})', fontsize=11)
     axes[2].axis('off')
     
     # 4. 予測結果
     if len(prediction.shape) == 1 or prediction.shape[-1] == 1:
         # 二値分類
         prob = float(prediction[0]) if len(prediction.shape) == 1 else float(prediction[0, 0])
-        result_text = f'異常確率: {prob:.1%}'
+        result_text = f'Abnormal: {prob:.1%}'
     else:
         # 多クラス分類
         pred_class = np.argmax(prediction[0])
         pred_prob = prediction[0, pred_class]
         if labels_dict:
-            class_name = labels_dict.get(str(pred_class), f'クラス{pred_class}')
+            class_name = labels_dict.get(str(pred_class), f'Class {pred_class}')
         else:
-            class_name = f'クラス {pred_class}'
-        result_text = f'予測: {class_name}\n確信度: {pred_prob:.1%}'
+            class_name = f'Class {pred_class}'
+        result_text = f'Pred: {class_name}\nConf: {pred_prob:.1%}'
     
     axes[3].text(0.5, 0.5, result_text, fontsize=14, ha='center', va='center',
                  bbox=dict(boxstyle='round', facecolor='lightblue', alpha=0.8))
-    axes[3].set_title('④ 予測結果', fontsize=11)
+    axes[3].set_title('4. Prediction', fontsize=11)
     axes[3].axis('off')
     axes[3].set_xlim(0, 1)
     axes[3].set_ylim(0, 1)
     
-    plt.suptitle('CNNの処理の流れ：入力 → 特徴抽出 → 予測', fontsize=13)
+    plt.suptitle('CNN Flow: Input -> Features -> Prediction', fontsize=13)
     plt.tight_layout()
     plt.show()
 
