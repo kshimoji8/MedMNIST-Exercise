@@ -241,6 +241,9 @@ def visualize_feature_maps(model, image, layer_name=None, max_features=16):
     """
     CNNの中間層（特徴マップ）を可視化する。
     
+    【技術詳細】Keras 3 (TensorFlow 2.16+) では model.input への直接アクセスが
+    制限されているため、Functional APIで中間モデルを再構築している。
+    
     Parameters
     ----------
     model : keras.Model
@@ -275,11 +278,21 @@ def visualize_feature_maps(model, image, layer_name=None, max_features=16):
     else:
         target_layer = model.get_layer(layer_name)
     
-    # 中間出力を取得するモデルを構築
-    intermediate_model = tf.keras.Model(
-        inputs=model.input,
-        outputs=target_layer.output
-    )
+    # Keras 3対応: 入力テンソルを新規作成してFunctional APIで再構築
+    inputs = tf.keras.Input(shape=img_array.shape[1:])
+    x = inputs
+    target_output = None
+    for layer in model.layers:
+        x = layer(x)
+        if layer.name == target_layer.name:
+            target_output = x
+            break
+    
+    if target_output is None:
+        print(f"[警告] 層 '{target_layer.name}' が見つかりません。")
+        return None
+    
+    intermediate_model = tf.keras.Model(inputs=inputs, outputs=target_output)
     
     # 特徴マップを取得
     feature_maps = intermediate_model.predict(img_array, verbose=0)
@@ -323,6 +336,9 @@ def visualize_cnn_flow(model, image, labels_dict=None):
     """
     CNNの処理の流れを可視化する（入力→特徴マップ→予測）。
     
+    【技術詳細】Keras 3 (TensorFlow 2.16+) では model.input への直接アクセスが
+    制限されているため、Functional APIで中間モデルを再構築している。
+    
     Parameters
     ----------
     model : keras.Model
@@ -349,15 +365,22 @@ def visualize_cnn_flow(model, image, labels_dict=None):
         print("[警告] 可視化には少なくとも2つの畳み込み層が必要です。")
         return
     
-    # 各畳み込み層の出力を取得
+    # Keras 3対応: 各畳み込み層の出力を取得
     layer_outputs = []
-    for layer in conv_layers[:2]:  # 最初の2層のみ
-        intermediate_model = tf.keras.Model(
-            inputs=model.input,
-            outputs=layer.output
-        )
-        output = intermediate_model.predict(img_array, verbose=0)
-        layer_outputs.append((layer.name, output))
+    for target_layer in conv_layers[:2]:  # 最初の2層のみ
+        inputs = tf.keras.Input(shape=img_array.shape[1:])
+        x = inputs
+        target_output = None
+        for layer in model.layers:
+            x = layer(x)
+            if layer.name == target_layer.name:
+                target_output = x
+                break
+        
+        if target_output is not None:
+            intermediate_model = tf.keras.Model(inputs=inputs, outputs=target_output)
+            output = intermediate_model.predict(img_array, verbose=0)
+            layer_outputs.append((target_layer.name, output))
     
     # 予測を取得
     prediction = model.predict(img_array, verbose=0)
