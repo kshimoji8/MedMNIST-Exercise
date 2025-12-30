@@ -16,13 +16,13 @@ def initialize_environment():
     Colab/Local環境を自動判別し、必要なセットアップを完結させる。
     subprocess.run はコマンドの完了まで Python の処理をブロック（待機）します。
     """
-    print("--- Environment Initializing ---")
+    print("--- 環境を初期化中 ---")
     
     # 1. Colab判定
     IN_COLAB = 'google.colab' in sys.modules
     
     if IN_COLAB:
-        print("[Status] Google Colab detected. Installing dependencies...")
+        print("[状態] Google Colabを検出しました。依存関係をインストール中...")
         subprocess.run([
             "pip", "install", 
             "medmnist", 
@@ -32,9 +32,9 @@ def initialize_environment():
             "seaborn",
             "-q"
         ], check=True)
-        print("[Status] Installation finished.")
+        print("[状態] インストールが完了しました。")
     else:
-        print("[Status] Local environment detected.")
+        print("[状態] ローカル環境を検出しました。")
 
     # 2. パスの自動設定
     current_dir = os.path.dirname(os.path.abspath(__file__)) if '__file__' in locals() else os.getcwd()
@@ -51,14 +51,14 @@ def initialize_environment():
         if gpus:
             for gpu in gpus:
                 tf.config.experimental.set_memory_growth(gpu, True)
-            print(f"[GPU] Found and configured: {gpus}")
+            print(f"[GPU] 検出・設定完了: {gpus}")
         else:
-            print("[GPU] Not found. Using CPU.")
+            print("[GPU] 検出されませんでした。CPUを使用します。")
             
     except Exception as e:
-        print(f"[Warning] TensorFlow/GPU configuration issue: {e}")
+        print(f"[警告] TensorFlow/GPU設定の問題: {e}")
 
-    print("--- Setup Complete ---\n")
+    print("--- セットアップ完了 ---\n")
 
 
 # ==========================================
@@ -117,11 +117,11 @@ def load_and_preprocess(data_flag='pathmnist', as_rgb=True, binary_classificatio
             info['label'] = {'0': 'normal', '1': 'abnormal'}
             info['n_classes'] = 2
             
-            print(f"[Info] Converted to binary classification: Normal vs Abnormal")
-            print(f"  Training: {int((y_train == 0).sum())} normal, {int((y_train == 1).sum())} abnormal")
-            print(f"  Test: {int((y_test == 0).sum())} normal, {int((y_test == 1).sum())} abnormal")
+            print(f"[情報] 二値分類に変換しました: 正常 vs 異常")
+            print(f"  訓練データ: 正常 {int((y_train == 0).sum())}件, 異常 {int((y_train == 1).sum())}件")
+            print(f"  テストデータ: 正常 {int((y_test == 0).sum())}件, 異常 {int((y_test == 1).sum())}件")
         else:
-            print("[Warning] binary_classification=True but data is not multi-label. Ignored.")
+            print("[警告] binary_classification=Trueですが、データがマルチラベルではありません。無視されました。")
     else:
         # 通常の処理
         if len(y_train.shape) == 1:
@@ -219,7 +219,7 @@ def show_evaluation_reports(model, x_test, y_test, labels_dict, multi_label=Fals
     
     if multi_label:
         auc = roc_auc_score(y_test, y_pred_prob)
-        print(f"Overall AUC Score: {auc:.4f}")
+        print(f"全体AUCスコア: {auc:.4f}")
     else:
         y_pred = np.argmax(y_pred_prob, axis=1)
         y_true = y_test.flatten()
@@ -555,7 +555,7 @@ def create_sample_images(x_test, y_test, info, data_flag, n_samples=10):
         
         img.save(filepath, 'JPEG')
         saved_files.append(filepath)
-        print(f"Created: {filename} (Label: {label})")
+        print(f"作成: {filename} (ラベル: {label})")
     
     # ZIPファイルにまとめる
     zip_path = '/tmp/sample_images.zip'
