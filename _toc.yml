@@ -1,0 +1,10 @@
+# Jupyter Book 目次構成
+# https://jupyterbook.org/en/stable/structure/toc.html
+
+format: jb-book
+root: README
+chapters:
+  - file: 01_cnn
+  - file: 02_transfer
+  - file: 03_grad-cam
+  - file: 04_deploy

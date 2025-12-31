@@ -1,0 +1,29 @@
+# Jupyter Book 設定ファイル
+# https://jupyterbook.org/en/stable/customize/config.html
+
+title: MedMNIST Exercise
+author: ""
+logo: ""
+
+execute:
+  execute_notebooks: "off"  # Notebookは実行せずHTMLに変換
+
+html:
+  use_issues_button: false
+  use_repository_button: true
+  use_edit_page_button: false
+  home_page_in_navbar: true
+  baseurl: "https://kshimoji8.github.io/MedMNIST-Exercise"
+
+repository:
+  url: "https://github.com/kshimoji8/MedMNIST-Exercise"
+  branch: main
+
+launch_buttons:
+  colab_url: "https://colab.research.google.com"
+
+sphinx:
+  config:
+    language: ja
+    html_theme_options:
+      navigation_with_keys: false

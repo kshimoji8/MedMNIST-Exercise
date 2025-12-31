@@ -1,0 +1,2 @@
+# Jupyter Book ビルド用依存関係
+jupyter-book>=1.0.0
