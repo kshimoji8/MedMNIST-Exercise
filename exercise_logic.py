@@ -173,6 +173,44 @@ def load_and_preprocess(data_flag='pathmnist', as_rgb=True, binary_classificatio
     return (x_train, y_train), (x_test, y_test), info
 
 
+def show_sample_images(x_data, n_samples=10, cols=5, figsize=(12, 5)):
+    """
+    データセットのサンプル画像をグリッド表示する。
+
+    【技術解説】
+    講義冒頭でデータセットの概観を視覚的に理解するために使用する。
+    matplotlibのsubplotsで画像をグリッド配置し、plt.show()で
+    Jupyter/Colabの出力セルに直接表示する。
+
+    Parameters
+    ----------
+    x_data : np.ndarray
+        画像データ配列 (N, H, W, C) または (N, H, W)
+    n_samples : int
+        表示する画像数（デフォルト: 10）
+    cols : int
+        1行あたりの列数（デフォルト: 5）
+    figsize : tuple
+        図のサイズ（デフォルト: (12, 5)）
+    """
+    n_samples = min(n_samples, len(x_data))
+    rows = (n_samples + cols - 1) // cols
+
+    fig, axes = plt.subplots(rows, cols, figsize=figsize)
+    axes = np.array(axes).flatten() if n_samples > 1 else [axes]
+
+    for i in range(n_samples):
+        axes[i].imshow(x_data[i])
+        axes[i].axis('off')
+
+    # 余分なサブプロットを非表示
+    for i in range(n_samples, len(axes)):
+        axes[i].axis('off')
+
+    plt.tight_layout()
+    plt.show()
+
+
 # ==========================================
 # 2. モデル構築ロジック
 # ==========================================
